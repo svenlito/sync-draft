@@ -10,3 +10,7 @@ variable "lambda_function_zip" {
 variable "lambda_function_name" {
   default = "hello"
 }
+
+variable "bucket_name" {
+  type = string
+}

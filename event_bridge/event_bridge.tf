@@ -10,8 +10,8 @@ resource "aws_cloudwatch_event_rule" "aws_cloudwatch_event_rule_hello" {
 {
   "detail-type": ["greetings"],
   "source": ["com.greetings.app"],
-  "account": ["521196292520"],
-  "region": ["ap-southeast-1"]
+  "account": ["${var.aws_account_id}"],
+  "region": ["${var.aws_region}"]
 }
 EOF
 }

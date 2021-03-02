@@ -2,10 +2,8 @@
 
 - demo configs for resources setup in AWS
 
-### Current features
+### Current demos
 
-- Cloudwatch
 - Event bridge
-- IAM
-- Lambda
-- S3
+- S3 website
+  

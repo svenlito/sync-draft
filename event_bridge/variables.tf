@@ -9,7 +9,3 @@ variable "lambda_function_zip" {
 variable "lambda_function_name" {
   type = string
 }
-
-variable "bucket_name" {
-  type = string
-}

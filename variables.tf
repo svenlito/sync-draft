@@ -1,14 +1,13 @@
 variable "aws_region" {
-  type    = string
-  default = "ap-southeast-1"
+  type = string
 }
 
 variable "lambda_function_zip" {
-  default = "./lambdas/hello.zip"
+  type = string
 }
 
 variable "lambda_function_name" {
-  default = "hello"
+  type = string
 }
 
 variable "bucket_name" {

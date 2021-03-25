@@ -43,7 +43,12 @@ resource "aws_iam_policy" "iam_for_shopify_policy" {
         "dynamodb:Scan",
         "dynamodb:BatchWriteItem",
         "dynamodb:PutItem",
-        "dynamodb:UpdateItem"
+        "dynamodb:UpdateItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:DescribeStream",
+        "dynamodb:ListShards",
+        "dynamodb:ListStreams"
       ],
       "Resource": ["arn:aws:logs:*:*:*", "arn:aws:dynamodb:*:*:*"],
       "Effect": "Allow"

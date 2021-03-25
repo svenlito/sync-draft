@@ -14,26 +14,14 @@ resource "aws_cloudwatch_event_rule" "create_product" {
 EOF
 }
 
-resource "aws_cloudwatch_event_rule" "update_product_apollo" {
-  name           = "update_product_apollo"
+resource "aws_cloudwatch_event_rule" "update_product" {
+  name           = "update_product"
   event_bus_name = aws_cloudwatch_event_bus.sync_products.name
 
   event_pattern = <<EOF
 {
   "detail-type": ["product.update"],
-  "source": ["co.pmlo.apollo"]
-}
-EOF
-}
-
-resource "aws_cloudwatch_event_rule" "update_product_henry" {
-  name           = "update_product_henry"
-  event_bus_name = aws_cloudwatch_event_bus.sync_products.name
-
-  event_pattern = <<EOF
-{
-  "detail-type": ["product.update"],
-  "source": ["co.pmlo.henry"]
+  "source": ["co.pmlo.henry", "co.pmlo.apollo"]
 }
 EOF
 }

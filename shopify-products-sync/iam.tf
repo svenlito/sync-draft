@@ -36,9 +36,16 @@ resource "aws_iam_policy" "iam_for_shopify_policy" {
       "Action": [
         "logs:CreateLogGroup",
         "logs:CreateLogStream",
-        "logs:PutLogEvents"
+        "logs:PutLogEvents",
+        "dynamodb:BatchGetItem",
+        "dynamodb:GetItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem"
       ],
-      "Resource": "arn:aws:logs:*:*:*",
+      "Resource": ["arn:aws:logs:*:*:*", "arn:aws:dynamodb:*:*:*"],
       "Effect": "Allow"
     }
   ]

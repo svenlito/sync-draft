@@ -1,45 +1,48 @@
-resource "aws_cloudwatch_event_bus" "greetings" {
-  name = "greetings"
+resource "aws_cloudwatch_event_bus" "sync_products" {
+  name = "sync_products"
 }
 
-resource "aws_cloudwatch_event_rule" "hello_app_rule" {
-  name           = "hello_app"
-  event_bus_name = aws_cloudwatch_event_bus.greetings.name
+resource "aws_cloudwatch_event_rule" "create_product" {
+  name           = "create_product"
+  event_bus_name = aws_cloudwatch_event_bus.sync_products.name
 
   event_pattern = <<EOF
 {
-  "detail-type": ["greetings"],
-  "source": ["com.greetings.app"],
-  "account": ["${var.aws_account_id}"],
-  "region": ["${var.aws_region}"]
+  "detail-type": ["product.create"],
+  "source": ["co.pmlo.henry"]
 }
 EOF
 }
 
-resource "aws_cloudwatch_event_rule" "hello_dev_rule" {
-  name           = "hello_dev"
-  event_bus_name = aws_cloudwatch_event_bus.greetings.name
+resource "aws_cloudwatch_event_rule" "update_product_apollo" {
+  name           = "update_product_apollo"
+  event_bus_name = aws_cloudwatch_event_bus.sync_products.name
 
   event_pattern = <<EOF
 {
-  "detail-type": ["greetings"],
-  "source": ["com.greetings.dev"],
-  "account": ["${var.aws_account_id}"],
-  "region": ["${var.aws_region}"]
+  "detail-type": ["product.update"],
+  "source": ["co.pmlo.apollo"]
 }
 EOF
 }
 
-resource "aws_cloudwatch_event_target" "hello_app_logs" {
-  rule           = aws_cloudwatch_event_rule.hello_app_rule.name
-  event_bus_name = aws_cloudwatch_event_bus.greetings.name
-  target_id      = "SendToAppLogs"
-  arn            = aws_cloudwatch_log_group.hello_logs.arn
+resource "aws_cloudwatch_event_rule" "update_product_henry" {
+  name           = "update_product_henry"
+  event_bus_name = aws_cloudwatch_event_bus.sync_products.name
+
+  event_pattern = <<EOF
+{
+  "detail-type": ["product.update"],
+  "source": ["co.pmlo.henry"]
+}
+EOF
 }
 
-resource "aws_cloudwatch_event_target" "hello_dev_logs" {
-  rule           = aws_cloudwatch_event_rule.hello_dev_rule.name
-  event_bus_name = aws_cloudwatch_event_bus.greetings.name
-  target_id      = "SendToDevLogs"
-  arn            = aws_cloudwatch_log_group.hello_logs.arn
+
+resource "aws_cloudwatch_event_target" "sku_target" {
+  rule           = aws_cloudwatch_event_rule.create_product.name
+  event_bus_name = aws_cloudwatch_event_bus.sync_products.name
+  target_id      = "sku"
+  arn            = aws_lambda_function.sku_lambda.arn
 }
+

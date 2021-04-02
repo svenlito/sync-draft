@@ -297,35 +297,7 @@ module "step_function" {
 
   name = "${random_pet.this.id}-step-function"
 
-  definition = <<EOF
-{
-  "Comment": "Push product details to Shopify and connected systems",
-  "StartAt": "PushToShopify",
-  "States": {
-    "PushToShopify": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::lambda:invoke",
-      "Parameters": {
-        "FunctionName": "${module.lambda_function_shopify_push_handler.this_lambda_function_arn}",
-        "Payload": {
-          "Input.$": "$"
-        }
-      },
-      "ResultPath": "$.result",
-      "OutputPath": "$.result.Payload",
-      "Next": "PushToCMS"
-    },
-    "PushToCMS": {
-      "Type": "Pass",
-      "Next": "Done"
-    },
-    "Done": {
-      "Type": "Pass",
-      "End": true
-    }
-  }
-}
-EOF
+  definition = jsonencode(yamldecode(templatefile("sfn.yaml", { sfnARN = module.lambda_function_shopify_push_handler.this_lambda_function_arn })))
 
   service_integrations = {
     lambda = {

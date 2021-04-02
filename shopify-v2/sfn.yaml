@@ -1,0 +1,20 @@
+---
+Comment: Push product details to Shopify and connected systems
+StartAt: PushToShopify
+States:
+  PushToShopify:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    Parameters:
+      FunctionName: ${sfnARN}
+      Payload:
+        Input.$: "$"
+    ResultPath: "$.result"
+    OutputPath: "$.result.Payload"
+    Next: PushToCMS
+  PushToCMS:
+    Type: Pass
+    Next: Done
+  Done:
+    Type: Pass
+    End: true

@@ -168,6 +168,56 @@ module "lambda_function_sku_handler" {
   }
 }
 
+module "lambda_function_stream_handler" {
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "1.44.0"
+
+  function_name = "${random_pet.this.id}-stream-handler"
+  description   = "Handle streams from dynamo db"
+  handler       = "stream.handler"
+  runtime       = "nodejs12.x"
+
+  source_path = "./functions"
+
+  event_source_mapping = {
+    dynamodb = {
+      event_source_arn  = module.dynamodb_table.this_dynamodb_table_stream_arn
+      starting_position = "LATEST"
+    }
+  }
+
+  allowed_triggers = {
+    dynamodb = {
+      principal  = "dynamodb.amazonaws.com"
+      source_arn = module.dynamodb_table.this_dynamodb_table_stream_arn
+    }
+  }
+
+  create_current_version_allowed_triggers = false
+
+  # Allow failures to be sent to SQS queue
+  attach_policy_statements = true
+  policy_statements = {
+    sqs_failure = {
+      effect    = "Allow",
+      actions   = ["sqs:SendMessage"],
+      resources = [module.dlq.this_sqs_queue_arn]
+    }
+  }
+
+  attach_policies    = true
+  number_of_policies = 2
+
+  policies = [
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole",
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaDynamoDBExecutionRole"
+  ]
+
+  tags = {
+    Name = "${random_pet.this.id}-stream-handler"
+  }
+}
+
 module "dynamodb_table" {
   source  = "terraform-aws-modules/dynamodb-table/aws"
   version = "0.13.0"

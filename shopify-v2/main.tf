@@ -206,15 +206,52 @@ module "lambda_function_stream_handler" {
   }
 
   attach_policies    = true
-  number_of_policies = 2
+  number_of_policies = 3
 
   policies = [
     "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole",
-    "arn:aws:iam::aws:policy/service-role/AWSLambdaDynamoDBExecutionRole"
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaDynamoDBExecutionRole",
+    "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
   ]
 
   tags = {
     Name = "${random_pet.this.id}-stream-handler"
+  }
+}
+
+
+module "lambda_function_shopify_push_handler" {
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "1.44.0"
+
+  function_name = "${random_pet.this.id}-shopify-push-handler"
+  description   = "Handle product push to Shopify"
+  handler       = "shopifyPush.handler"
+  runtime       = "nodejs12.x"
+
+  source_path = "./functions"
+
+  create_current_version_allowed_triggers = false
+
+  # Allow failures to be sent to SQS queue
+  attach_policy_statements = true
+  policy_statements = {
+    sqs_failure = {
+      effect    = "Allow",
+      actions   = ["sqs:SendMessage"],
+      resources = [module.dlq.this_sqs_queue_arn]
+    }
+  }
+
+  attach_policies    = true
+  number_of_policies = 1
+
+  policies = [
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole",
+  ]
+
+  tags = {
+    Name = "${random_pet.this.id}-shopify-push-handler"
   }
 }
 
@@ -242,5 +279,53 @@ module "dynamodb_table" {
 
   tags = {
     Name = "${random_pet.this.id}-products-table"
+  }
+}
+
+module "step_function" {
+  source = "terraform-aws-modules/step-functions/aws"
+
+  name = "${random_pet.this.id}-step-function"
+
+  definition = <<EOF
+{
+  "Comment": "Push product details to Shopify and connected systems",
+  "StartAt": "PushToShopify",
+  "States": {
+    "PushToShopify": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${module.lambda_function_shopify_push_handler.this_lambda_function_arn}",
+        "Payload": {
+          "Input.$": "$"
+        }
+      },
+      "ResultPath": "$.result",
+      "OutputPath": "$.result.Payload",
+      "Next": "PushToCMS"
+    },
+    "PushToCMS": {
+      "Type": "Pass",
+      "Next": "Done"
+    },
+    "Done": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}
+EOF
+
+  service_integrations = {
+    lambda = {
+      lambda = [module.lambda_function_shopify_push_handler.this_lambda_function_arn]
+    }
+  }
+
+  type = "STANDARD"
+
+  tags = {
+    Name = "${random_pet.this.id}-step-function"
   }
 }

@@ -1,46 +1,134 @@
-resource "aws_lambda_function" "sku_lambda" {
-  filename      = "functions/sku.zip"
-  function_name = "sku"
-  role          = aws_iam_role.iam_for_shopify.arn
+module "lambda_function_sku_handler" {
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "1.44.0"
+
+  function_name = "${random_pet.this.id}-sku-handler"
+  description   = "Insert / update product details in to db"
   handler       = "sku.handler"
+  runtime       = "nodejs12.x"
 
-  source_code_hash = filebase64sha256("functions/sku.zip")
+  source_path = "./functions"
 
-  runtime = "nodejs12.x"
+  create_current_version_allowed_triggers = false
 
-  depends_on = [
-    aws_iam_role_policy_attachment.iam_for_shopify_attachment,
-    aws_cloudwatch_log_group.sku_logs,
+  event_source_mapping = {
+    sqs = {
+      event_source_arn = module.queue.this_sqs_queue_arn
+    }
+  }
+
+  allowed_triggers = {
+    sqs = {
+      principal  = "sqs.amazonaws.com"
+      source_arn = module.queue.this_sqs_queue_arn
+    }
+  }
+
+  attach_policy_statements = true
+  policy_statements = {
+    sqs_failure = {
+      effect    = "Allow",
+      actions   = ["sqs:SendMessage"],
+      resources = [module.dlq.this_sqs_queue_arn]
+    }
+  }
+
+  attach_policies    = true
+  number_of_policies = 1
+
+  policies = [
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
   ]
+
+
+  tags = {
+    Name = "${random_pet.this.id}-sku-handler"
+  }
 }
 
-resource "aws_lambda_function" "stream_trigger_lambda" {
-  filename      = "functions/stream_trigger.zip"
-  function_name = "stream_trigger"
-  role          = aws_iam_role.iam_for_shopify.arn
-  handler       = "stream_trigger.handler"
+module "lambda_function_stream_handler" {
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "1.44.0"
 
-  source_code_hash = filebase64sha256("functions/stream_trigger.zip")
+  function_name = "${random_pet.this.id}-stream-handler"
+  description   = "Handle streams from dynamo db"
+  handler       = "stream.handler"
+  runtime       = "nodejs12.x"
 
-  runtime = "nodejs12.x"
+  source_path = "./functions"
 
-  depends_on = [
-    aws_iam_role_policy_attachment.iam_for_shopify_attachment,
-    aws_cloudwatch_log_group.sku_logs,
+  event_source_mapping = {
+    dynamodb = {
+      event_source_arn  = module.dynamodb_table.this_dynamodb_table_stream_arn
+      starting_position = "LATEST"
+    }
+  }
+
+  allowed_triggers = {
+    dynamodb = {
+      principal  = "dynamodb.amazonaws.com"
+      source_arn = module.dynamodb_table.this_dynamodb_table_stream_arn
+    }
+  }
+
+  create_current_version_allowed_triggers = false
+
+  # Allow failures to be sent to SQS queue
+  attach_policy_statements = true
+  policy_statements = {
+    sqs_failure = {
+      effect    = "Allow",
+      actions   = ["sqs:SendMessage"],
+      resources = [module.dlq.this_sqs_queue_arn]
+    }
+  }
+
+  attach_policies    = true
+  number_of_policies = 3
+
+  policies = [
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole",
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaDynamoDBExecutionRole",
+    "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
   ]
+
+  tags = {
+    Name = "${random_pet.this.id}-stream-handler"
+  }
 }
 
-resource "aws_lambda_event_source_mapping" "stream_trigger_mapping" {
-  event_source_arn  = aws_dynamodb_table.products_table.stream_arn
-  function_name     = aws_lambda_function.stream_trigger_lambda.arn
-  starting_position = "LATEST"
-}
 
+module "lambda_function_shopify_push_handler" {
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "1.44.0"
 
-resource "aws_lambda_permission" "allow_invocation" {
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.sku_lambda.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.create_product.arn
+  function_name = "${random_pet.this.id}-shopify-push-handler"
+  description   = "Handle product push to Shopify"
+  handler       = "shopifyPush.handler"
+  runtime       = "nodejs12.x"
+
+  source_path = "./functions"
+
+  create_current_version_allowed_triggers = false
+
+  # Allow failures to be sent to SQS queue
+  attach_policy_statements = true
+  policy_statements = {
+    sqs_failure = {
+      effect    = "Allow",
+      actions   = ["sqs:SendMessage"],
+      resources = [module.dlq.this_sqs_queue_arn]
+    }
+  }
+
+  attach_policies    = true
+  number_of_policies = 1
+
+  policies = [
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole",
+  ]
+
+  tags = {
+    Name = "${random_pet.this.id}-shopify-push-handler"
+  }
 }

@@ -88,7 +88,7 @@ module "queue" {
   name   = "${random_pet.this.id}-queue"
   policy = data.aws_iam_policy_document.queue_policy.json
   redrive_policy = jsonencode({
-    "deadLetterTargetArn" : "${module.dlq.this_sqs_queue_arn}",
+    "deadLetterTargetArn" : module.dlq.this_sqs_queue_arn,
     "maxReceiveCount" : 4
   })
 
@@ -165,5 +165,32 @@ module "lambda_function_sku_handler" {
 
   tags = {
     Name = "${random_pet.this.id}-sku-handler"
+  }
+}
+
+module "dynamodb_table" {
+  source  = "terraform-aws-modules/dynamodb-table/aws"
+  version = "0.13.0"
+
+  name      = "products"
+  hash_key  = "PK"
+  range_key = "SK"
+
+  attributes = [
+    {
+      name = "PK"
+      type = "S"
+    },
+    {
+      name = "SK"
+      type = "S"
+    }
+  ]
+
+  stream_enabled   = true
+  stream_view_type = "NEW_AND_OLD_IMAGES"
+
+  tags = {
+    Name = "${random_pet.this.id}-products-table"
   }
 }

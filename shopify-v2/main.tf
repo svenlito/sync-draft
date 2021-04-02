@@ -87,6 +87,10 @@ module "queue" {
 
   name   = "${random_pet.this.id}-queue"
   policy = data.aws_iam_policy_document.queue_policy.json
+  redrive_policy = jsonencode({
+    "deadLetterTargetArn" : "${module.dlq.this_sqs_queue_arn}",
+    "maxReceiveCount" : 4
+  })
 
   tags = {
     Name = "${random_pet.this.id}-queue"
